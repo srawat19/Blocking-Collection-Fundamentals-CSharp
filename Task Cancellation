@@ -1,0 +1,107 @@
+using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
+
+namespace ConsoleApp1
+{
+    class Program
+    {
+        static Task processCommunicationStart;
+        static Task processTimerUpdate;
+
+        private static CancellationTokenSource tokenSource = new CancellationTokenSource();
+        static CancellationToken token = tokenSource.Token;
+
+
+        static void Main(string[] args)
+        {
+            START();
+            Thread.Sleep(5000); //Doing things in our case 
+            STOP();
+
+            Console.ReadLine();
+        }
+
+        private static void START()
+        {
+            try
+            {
+                processCommunicationStart = Task.Factory.StartNew(() => StartCommunication(), token);
+                processTimerUpdate = Task.Factory.StartNew(() => TimerPacketUpdate(), token);
+                //processCommunicationStart = Task.Factory.StartNew(() =>StartCommunication("SS"), token);
+            }
+            catch (Exception EX)
+            {
+                Console.WriteLine(EX.InnerException.Message);
+            }
+        }
+
+        private static void TimerPacketUpdate()
+        {
+            List<int> plcFDatas = new List<int>();
+            plcFDatas.Add(5);
+            plcFDatas.Add(10);
+
+            ConcurrentDictionary<string, string> _defaultPacket = new ConcurrentDictionary<string, string>();
+            _defaultPacket.TryAdd("PRINTER_TX_STRING", "LOAD     0506");
+            _defaultPacket.TryAdd("IO", "True");
+
+            //LOOP PLC LIST Get the Timer from here & update _defaultResponsePackets;
+            foreach (var item in plcFDatas)
+            {
+                try
+                {
+                    while (!token.IsCancellationRequested)
+                    {
+                        //update _defaultResponsePacket with new ResponsePacket
+
+                        //Find key and then Update Packet
+                        _defaultPacket.TryUpdate("PRINTER_TX_STRING", "HELLO", "LOAD     0506");
+                        Thread.Sleep(item);
+                    }
+                }
+                catch (OperationCanceledException op)
+                {
+                    Console.WriteLine("Task Cancelled" + op.InnerException.Message);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.InnerException.Message);
+                }
+            }
+        }
+
+        private static void StartCommunication()
+        {
+            try
+            {
+                while (!token.IsCancellationRequested)
+                {
+                    Console.WriteLine("START COMMUNICATION !! ");
+                    if (token.IsCancellationRequested)
+                        token.ThrowIfCancellationRequested();
+                    //Thread.Sleep(1000);
+                }
+            }
+            catch (OperationCanceledException op)
+            {
+                Console.WriteLine("Task Cancelled" + op.Message);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.InnerException.Message);
+            }
+        }
+
+        private static void STOP()
+        {
+            tokenSource.Cancel();
+        }
+
+
+    }
+
+
+}
