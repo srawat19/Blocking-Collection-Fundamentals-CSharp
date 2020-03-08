@@ -1,0 +1,131 @@
+
+
+How to work with BlockingCollection in C#
+
+The BlockingCollection class in .Net implements thread-safe collections efficiently
+     
+BlockingCollection
+Consider a scenario where multiple threads would be reading and writing to a queue. More specifically, you might have at the same point of time, multiple producers storing data and multiple consumers retrieving them from a common data store. Hence, you would need a proper synchronization mechanism so as to synchronize the access to this data.
+
+Here's exactly where the BlockingCollection class comes to the rescue. Although there are many other ways, this class provides one of the most efficient ways to synchronize access to your data. The BlockingCollection class belongs to the System.Collections.Concurrent namespace.
+
+What is a BlockingCollection?
+The BlockingCollection is a thread-safe collection in which you can have multiple threads add and remove data concurrently. It is represented in .Net through the BlockingCollection class; you can use this class to implement a producer-consumer pattern.
+
+
+In the producer-consumer pattern, you have two distinct components that run on two different threads. These include a producer component that produces some data that is pushed to the queue, and a consumer that consumes the data that is stored in the queue. When you are using a BlockingCollection, you can specify the bounded capacity as well as the type of the collection you would like to use.
+
+The BlockingCollection type acts as a wrapper over an instance of type IProducerConsumerCollection. In other words, it acts as a wrapper over another collection which in turn implements the IProducerConsumerCollection interface. As an example, the ConcurrentBag, ConcurrentQueue and ConcurrentStack classes can be used with a BlockingCollection since all of them implement the IProducerConsumerCollection interface.
+
+Note that the IProducerConsumerCollection interface contains declaration of methods that can be used to work with thread-safe collections. The MSDN states: "Defines methods to manipulate thread-safe collections intended for producer/consumer usage. This interface provides a unified representation for producer/consumer collections so that higher level abstractions such as System.Collections.Concurrent.BlockingCollection  can use the collection as the underlying storage mechanism."
+
+The following code snippet shows how you can create an instance of a BlockingCollection of strings.
+
+var blockingCollection = new BlockingCollection<string>();
+
+When using a BlockingCollection, you can add data to the collection either using the Add method or the TryAdd method. Let's now understand the difference between these two methods.
+
+BlockingCollection<int> data = new BlockingCollection<int>(boundedCapacity: 3);
+
+data.Add(1);
+
+data.Add(2);
+
+data.Add(3);
+
+data.Add(4); //This would block until an item is removed from the collection.
+
+Note how we have specified boundedCapacity when creating an instance of a BlockingCollection as shown in the code snippet given above. This is specified to indicate the bounded size of the collection instance.
+
+You can also use TryAdd method to add an item to a BlockingCollection instance. In this method, you can use a timeout value. If the add operation fails within the specified time, the TryAdd method returns false. The following code snippet shows how you can take advantage of the TryAdd method to add an item to an instance of BlockingCollection.
+
+BlockingCollection<int> data = new BlockingCollection<int>(boundedCapacity: 3);
+
+data.Add(1);
+
+data.Add(2);
+
+data.Add(3);
+
+if (data.TryAdd(4, TimeSpan.FromMilliseconds(100)))
+
+{
+
+   Console.WriteLine("A new item was successfully added to the collection.");
+
+}
+
+else
+
+{
+
+   Console.WriteLine("Failed to add a new item to the collection.");
+
+}
+
+To remove an item from a BlockingCollection, you can use the Take or the TryTake method. Note that the Take method blocks if there are no items in the collection and unblocks as soon as a new item is added to the collection. The TryTake method can also be used to remove an item from an instance of a BlockingCollection. You can specify a timeout value with this method so that the method blocks (till the specified time elapses) until an item is added to the collection. If an item could not be removed from the collection during this time (the timeout specified), the TryTake method returns false.
+
+The following code snippet illustrates how the TryTake method can be used to remove an item from an instance of type BlockingCollection.
+
+int item;
+
+while (data.TryTake(out item, TimeSpan.FromMilliseconds(100)))
+
+{
+
+   Console.WriteLine(item);
+
+}
+
+Here's a complete code listing for your reference. This program illustrates how you can use a BlockingCollection to add and remove items to and from a collection.
+
+ class Program
+
+   {
+
+       private static BlockingCollection<int> data = new BlockingCollection<int>();
+
+       private static void Producer()
+
+       {
+
+           for (int ctr = 0; ctr < 10; ctr++)
+
+           {
+
+               data.Add(ctr);
+
+               Thread.Sleep(100);
+
+           }
+
+       }
+
+       private static void Consumer()
+
+       {
+
+           foreach (var item in data.GetConsumingEnumerable())
+
+           {
+
+               Console.WriteLine(item);
+
+           }
+
+       }
+
+       static void Main(string[] args)
+
+       {
+
+           var producer = Task.Factory.StartNew(() => Producer());
+
+           var consumer = Task.Factory.StartNew(() => Consumer());
+
+           Console.Read();
+
+       }
+
+   }
+
